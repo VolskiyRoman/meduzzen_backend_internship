@@ -1,2 +1,5 @@
 .idea
 /venv
+.gitignore
+Dockerfile
+README.MD
