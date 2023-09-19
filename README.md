@@ -21,21 +21,21 @@ Before you begin, ensure you have met the following requirements:
    git clone https://github.com/VolskiyRoman/meduzzen_backend_internship
    cd /meduzzen_backend_internship
 
-2. Create a virtual environment and activate it (optional but recommended):
+2. Install Docker
 
-    ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # On Windows, use 'venv\Scripts\activate'
-   
-3. Install project dependencies:
+   (https://www.docker.com/get-started)
+
+3. Build the Docker image:
    
    ```bash
-   pip install -r requirements.txt
+   docker build -t my-django-app .
    
-4. Setup .env
+4. Run the Docker container:
 
-5. Start the development server:
-   
    ```bash
-   python manage.py runserver
-   
+   docker run -p 8000:8000 my-django-app
+
+5. Run the unit tests inside the Docker container:
+
+   ```bash
+   python manage.py test
