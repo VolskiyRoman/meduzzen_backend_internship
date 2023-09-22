@@ -1,5 +1,4 @@
-from django.http import JsonResponse, HttpResponse
-import redis
+from django.http import JsonResponse
 
 
 def health_check(request):
