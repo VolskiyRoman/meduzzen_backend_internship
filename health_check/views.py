@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 
+
 def health_check(request):
     response_data = {
         "status_code": 200,

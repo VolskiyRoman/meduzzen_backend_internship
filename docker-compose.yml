@@ -1,0 +1,38 @@
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+    ports:
+      - 8000:8000
+    depends_on:
+      - redis
+      - db
+    environment:
+      - .env
+    networks:
+      - mynetwork
+
+  redis:
+    image: redis:latest
+    ports:
+      - 6377:6379
+    networks:
+      - mynetwork
+
+  db:
+    image: postgres:13.3
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 12345
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
