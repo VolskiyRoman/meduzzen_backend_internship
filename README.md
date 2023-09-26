@@ -39,3 +39,13 @@ Before you begin, ensure you have met the following requirements:
 
    ```bash
    python manage.py test
+   
+6. Create migration:
+
+   ```bash
+   python manage.py makemigrations
+   
+5. Apply migrations
+
+   ```bash
+   python manage.py migrate
