@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Створення користувача</title>
+</head>
+<body>
+    <h1>Створення нового користувача</h1>
+    <form method="POST" action="/api/users/">
+        {% csrf_token %}
+        <label for="name">Ім'я:</label>
+        <input type="text" id="name" name="name" required><br>
+        <label for="description">Опис:</label>
+        <textarea id="description" name="description" required></textarea><br>
+        <button type="submit">Створити користувача</button>
+    </form>
+</body>
+</html>

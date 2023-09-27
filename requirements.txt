@@ -3,10 +3,12 @@ certifi==2023.7.22
 charset-normalizer==3.2.0
 Django==4.2.5
 django-cors-headers==4.2.0
+djangorestframework==3.14.0
 idna==3.4
 psycopg2==2.9.7
 psycopg2-binary==2.9.7
 python-dotenv==1.0.0
+pytz==2023.3.post1
 redis==5.0.0
 requests==2.31.0
 sqlparse==0.4.4
