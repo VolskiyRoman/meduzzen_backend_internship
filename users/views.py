@@ -23,5 +23,5 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-    def create_user_form(self, request):
-        return render(request, 'users/create_user.html')
+    def crud_user_form(self, request):
+        return render(request, 'users/crud_user.html')
