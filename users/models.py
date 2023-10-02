@@ -1,5 +1,5 @@
-from services.users.models import AbstractUser
+from services.users.models import CustomAbstractUser
 
 
-class User(AbstractUser):
+class User(CustomAbstractUser):
     pass
