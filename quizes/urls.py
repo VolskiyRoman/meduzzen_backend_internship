@@ -8,7 +8,10 @@ router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('api/', include(router.urls)),
+    #path('api/', include(router.urls)),
     path('crud_user/', UserViewSet.as_view({'get': 'crud_user_form'}), name='crud_user_form'),
     path("", include("health_check.urls")),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.jwt')),
+    path('auth/', include('djoser.social.urls')),
 ]

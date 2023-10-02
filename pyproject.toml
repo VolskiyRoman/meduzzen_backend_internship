@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 125
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "UP",  # pyupgrade
+]
+
+[tool.ruff.pydocstyle]
+convention = "google"
