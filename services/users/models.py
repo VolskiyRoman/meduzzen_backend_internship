@@ -26,6 +26,9 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_("Superuser must have is_superuser=True."))
         return self.create_user(email, password, **extra_fields)
 
+    def update_userpassword(self, email, old_password, new_password):
+        pass
+
 
 class CustomAbstractUser(AbstractUser, TimeStampedModel):
     username = None
