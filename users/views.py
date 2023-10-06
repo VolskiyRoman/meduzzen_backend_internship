@@ -25,3 +25,4 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def crud_user_form(self, request):
         return render(request, 'users/crud_user.html')
+
