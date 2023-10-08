@@ -1,9 +1,10 @@
+from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+
 from .models import User
 from .serializers import UserSerializer
-from django.shortcuts import render
-from rest_framework.pagination import PageNumberPagination
 
 
 class UserViewSet(viewsets.ModelViewSet):

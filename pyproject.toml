@@ -1,9 +1,19 @@
 [tool.ruff]
 line-length = 125
 select = [
-  "E",   # pycodestyle
-  "F",   # pyflakes
-  "UP",  # pyupgrade
+  "E",
+  "F",
+  "UP",
+  "I",
+  "C",
+]
+exclude = [
+    "settings.py",
+    "migrations",
+    ".git",
+    ".ruff_cache",
+    "venv",
+    "pycache",
 ]
 
 [tool.ruff.pydocstyle]

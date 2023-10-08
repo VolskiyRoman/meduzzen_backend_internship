@@ -1,0 +1,48 @@
+name: CI/CD
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up .env file
+        run: |
+          echo "POSTGRES_NAME=${{ secrets.POSTGRES_NAME }}" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}" >> .env
+          echo "REDIS_NAME=${{ secrets.REDIS_NAME }}" >> .env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+          echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" >> .env
+          echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
+      
+
+      - name: Set up Docker Compose
+        run: |
+          docker-compose --version
+        continue-on-error: true
+
+      - name: Build and start services
+        run: |
+          docker-compose up -d
+
+      - name: Run database migrations
+        run: |
+          docker exec meduzzen_backend_internship_app_1 python manage.py migrate
+
+      - name: Run linter
+        run: |
+          docker exec meduzzen_backend_internship_app_1 ruff check .
+
+      - name: Run tests
+        run: |
+          docker exec meduzzen_backend_internship_app_1 python manage.py test
+      
+          
+  
+
