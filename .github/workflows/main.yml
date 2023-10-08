@@ -10,11 +10,11 @@ jobs:
       POSTGRES_NAME: ${{ secrets.POSTGRES_NAME }}
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_HOST: $ {{ secrets.POSTGRES_HOST }}
-      REDIS_NAME: $ {{ secrets.REDIS_NAME }}
-      REDIS_PORT: $ {{ secrets.REDIS_PORT }}
-      EMAIL_HOST_USER: $ {{ secrets.EMAIL_HOST_USER }}
-      EMAIL_HOST_PASSWORD: $ {{ secrets.EMAIL_HOST_PASSWORD }}
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+      REDIS_NAME: ${{ secrets.REDIS_NAME }}
+      REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
 
     steps:
       - name: Checkout code
