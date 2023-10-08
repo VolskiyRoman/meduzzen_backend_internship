@@ -41,7 +41,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Ruff lint
-        run: ruff check .
+        run: docker-compose run --rm app sh -c "ruff check ."
 
       - name: Run Django tests
-        run: python manage.py test users
+        run: docker-compose run --rm app sh -c "python manage.py test"
