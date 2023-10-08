@@ -233,3 +233,4 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.environ.get("GMAIL_USERNAME")
 EMAIL_HOST_PASSWORD = os.environ.get("GMAIL_PASS")
 DOMAIN = "localhost:8080"
+
