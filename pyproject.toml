@@ -4,8 +4,9 @@ select = [
   "E",
   "F",
   "UP",
+  "I",
+  "C",
 ]
-
 exclude = [
     "settings.py",
     "migrations",
