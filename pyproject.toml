@@ -1,9 +1,9 @@
 [tool.ruff]
 line-length = 125
 select = [
-  "E",   # pycodestyle
-  "F",   # pyflakes
-  "UP",  # pyupgrade
+  "E",
+  "F",
+  "UP",
 ]
 
 exclude = [
