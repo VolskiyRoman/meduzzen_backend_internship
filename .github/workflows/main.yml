@@ -39,6 +39,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Set up PostgreSQL for tests
+        run: |
+          psql -U $POSTGRES_USER -d $POSTGRES_NAME -c "CREATE DATABASE mytestdb;"
+
       - name: Run linter
         run: ruff check .
 
