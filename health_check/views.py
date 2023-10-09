@@ -1,6 +1,5 @@
 from django.http import JsonResponse
-from pydantic import BaseModel
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 
 class HealthCheckRequest(BaseModel):
