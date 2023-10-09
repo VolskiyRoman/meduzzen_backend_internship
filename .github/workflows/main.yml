@@ -31,8 +31,17 @@ jobs:
           echo "EMAIL_HOST_USER=${EMAIL_HOST_USER}" >> .env
           echo "EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}" >> .env
 
+      - uses: docker/setup-buildx-action@v1
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          load: true
+          tags: backend
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Run Ruff lint
-        run: docker-compose run --rm app sh -c "ruff check ."
+        run: docker run --rm -v $(pwd):/app -w /app python:3.8 sh -c "pip install -r requirements.txt && ruff check ."
 
       - name: Run Django tests
-        run: docker-compose run --rm app sh -c "python manage.py test"
+        run: docker run --rm -e POSTGRES_NAME -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_HOST -e REDIS_NAME -e REDIS_PORT -e EMAIL_HOST_USER -e EMAIL_HOST_PASSWORD backend sh -c "python manage.py test"
