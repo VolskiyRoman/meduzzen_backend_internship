@@ -40,6 +40,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Display Environment Info
+        run: |
+          echo "Python Version: $(python --version)"
+          echo "PostgreSQL Version: $(psql --version)"
+      
+      - name: Check PostgreSQL Container Status
+        run: |
+          docker ps -a
+
+
       - name: Run Ruff lint
         run: docker run --rm -v $(pwd):/app -w /app python:3.8 sh -c "pip install -r requirements.txt && ruff check ."
 
