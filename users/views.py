@@ -1,9 +1,10 @@
+from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+
 from .models import User
 from .serializers import UserSerializer
-from django.shortcuts import render
-from rest_framework.pagination import PageNumberPagination
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -25,4 +26,3 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def crud_user_form(self, request):
         return render(request, 'users/crud_user.html')
-

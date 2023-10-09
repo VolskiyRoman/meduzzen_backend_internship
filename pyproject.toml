@@ -5,6 +5,13 @@ select = [
   "F",   # pyflakes
   "UP",  # pyupgrade
 ]
-
+exclude = [
+    "settings.py",
+    "migrations",
+    ".git",
+    ".ruff_cache",
+    "venv",
+    "pycache",
+]
 [tool.ruff.pydocstyle]
 convention = "google"
