@@ -1,4 +1,4 @@
-name: Django Tests and Code Quality
+name: Django Tests and PostgreSQL
 
 on: push
 
@@ -7,51 +7,36 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      POSTGRES_NAME: ${{ secrets.POSTGRES_NAME }}
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
-      REDIS_NAME: ${{ secrets.REDIS_NAME }}
-      REDIS_PORT: ${{ secrets.REDIS_PORT }}
-      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
-      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+      POSTGRES_PASSWORD: mysecretpassword
+      DJANGO_SETTINGS_MODULE: quizes.settings
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Export secrets
+      - name: Start PostgreSQL
         run: |
-          echo "POSTGRES_NAME=${POSTGRES_NAME}" > .env
-          echo "POSTGRES_USER=${POSTGRES_USER}" >> .env
-          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" >> .env
-          echo "POSTGRES_HOST=${POSTGRES_HOST}" >> .env
-          echo "REDIS_NAME=${REDIS_NAME}" >> .env
-          echo "REDIS_PORT=${REDIS_PORT}" >> .env
-          echo "EMAIL_HOST_USER=${EMAIL_HOST_USER}" >> .env
-          echo "EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}" >> .env
+          docker run --name postgres -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD -d -p 5432:5432 postgres:13.3
 
-      - uses: docker/setup-buildx-action@v1
-      - uses: docker/build-push-action@v2
+      - name: Wait for PostgreSQL to start
+        run: |
+          sleep 10  # Зачекайте 10 секунд
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          context: .
-          load: true
-          tags: backend
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          python-version: 3.8
 
-      - name: Display Environment Info
+      - name: Install dependencies
         run: |
-          echo "Python Version: $(python --version)"
-          echo "PostgreSQL Version: $(psql --version)"
-      
-      - name: Check PostgreSQL Container Status
-        run: |
-          docker ps -a
-
-
-      - name: Run Ruff lint
-        run: docker run --rm -v $(pwd):/app -w /app python:3.8 sh -c "pip install -r requirements.txt && ruff check ."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run Django tests
-        run: docker run --rm -e POSTGRES_NAME -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_HOST -e REDIS_NAME -e REDIS_PORT -e EMAIL_HOST_USER -e EMAIL_HOST_PASSWORD backend sh -c "python manage.py test"
+        run: |
+          python manage.py test
+
+      - name: Stop PostgreSQL
+        run: |
+          docker stop postgres
+          docker rm postgres
