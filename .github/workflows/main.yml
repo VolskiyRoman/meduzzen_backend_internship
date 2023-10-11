@@ -10,16 +10,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Create .env file
+      - name: Set up .env file
         run: |
-          echo "POSTGRES_NAME=postgres" >> .env
-          echo "POSTGRES_USER=admin" >> .env
-          echo "POSTGRES_PASSWORD=12345" >> .env
-          echo "POSTGRES_HOST=db" >> .env
-          echo "REDIS_NAME=redis" >> .env
-          echo "REDIS_PORT=6379" >> .env
-          echo "EMAIL_HOST_USER=quizzesproj@gmail.com" >> .env
-          echo "EMAIL_HOST_PASSWORD=ksrhezkjpjrrrmoa" >> .env
+          echo "POSTGRES_NAME=${{ secrets.POSTGRES_NAME }}" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}" >> .env
+          echo "REDIS_NAME=${{ secrets.REDIS_NAME }}" >> .env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+          echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" >> .env
+          echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
+      
 
       - name: Set up Docker Compose
         run: |
