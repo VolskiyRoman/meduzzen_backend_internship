@@ -24,8 +24,8 @@ services:
     networks:
       - mynetwork
 
-  db:
-    image: postgres:13.3
+  postgres:
+    image: postgres:latest
     ports:
       - 5433:5432
     environment:
