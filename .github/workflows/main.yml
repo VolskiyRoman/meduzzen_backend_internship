@@ -39,7 +39,12 @@ jobs:
           DJANGO_SETTINGS_MODULE: quizes.settings
           DATABASE_URL: postgres://admin:12345@localhost:5432/postgres
 
+      - name: Remove postmaster.pid
+        run: |
+          rm /opt/homebrew/var/postgres/postmaster.pid
+
       - name: Set up test database
         run: |
           python manage.py migrate
           python manage.py createcachetable
+
