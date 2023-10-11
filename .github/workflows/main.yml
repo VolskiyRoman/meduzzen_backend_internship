@@ -10,6 +10,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Create .env file
+        run: |
+          echo "POSTGRES_NAME=postgres" >> .env
+          echo "POSTGRES_USER=admin" >> .env
+          echo "POSTGRES_PASSWORD=12345" >> .env
+          echo "POSTGRES_HOST=db" >> .env
+          echo "REDIS_NAME=redis" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "EMAIL_HOST_USER=quizzesproj@gmail.com" >> .env
+          echo "EMAIL_HOST_PASSWORD=ksrhezkjpjrrrmoa" >> .env
+
+      - name: Login DockerHub
+
       - name: Set up Docker Compose
         run: |
           docker-compose --version
