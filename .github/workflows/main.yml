@@ -8,7 +8,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:13.3
+        image: postgres:latest
         env:
           POSTGRES_HOST: db
           POSTGRES_USER: admin
