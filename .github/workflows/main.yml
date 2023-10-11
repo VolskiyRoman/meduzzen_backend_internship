@@ -25,7 +25,7 @@ jobs:
 
       - name: RM
         run: |
-          docker exec meduzzen_backend_internship_db_1 sudo cp -r /var/run/postgresql /run/postgresql
+          docker exec meduzzen_backend_internship_db_1 cp -r /var/run/postgresql /run/postgresql
 
       - name: Run database migrations
         run: |
