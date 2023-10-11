@@ -41,6 +41,10 @@ jobs:
 
       - name: Remove postmaster.pid
         run: |
+          cd ..
+          ls -a
+          echo 'hello'
+          cd ..
           ls -a
 
 #      - name: Set up test database
