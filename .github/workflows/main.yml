@@ -14,7 +14,7 @@ jobs:
           POSTGRES_USER: admin
           POSTGRES_PASSWORD: 12345
         ports:
-          - 5433:5432
+          - 5432:5432
 
       redis:
         image: redis:latest
@@ -36,10 +36,9 @@ jobs:
           python -m pip install -r requirements.txt
         env:
           DJANGO_SETTINGS_MODULE: quizes.settings
+          DATABASE_URL: postgres://admin:12345@localhost:5432/postgres
 
       - name: Set up test database
         run: |
           python manage.py migrate
           python manage.py createcachetable
-        env:
-          DATABASE_URL: postgres://admin:12345@db:5432/postgres
