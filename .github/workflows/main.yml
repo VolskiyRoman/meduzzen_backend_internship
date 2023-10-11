@@ -16,6 +16,11 @@ jobs:
         ports:
           - 5433:5432
 
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -30,10 +35,20 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
         env:
+          DJANGO_SETTINGS_MODULE: quizes.settings
+      - name: Set up test database
+        run: |
+          python manage.py migrate
+          python manage.py createcachetable
+        env:
           DATABASE_URL: postgres://admin:12345@localhost:5433/postgres
-          DJANGO_SECRET_KEY: 'your-secret-key'
+
+      - name: Set up environment variables
+        run: |
+          echo "POSTGRES_NAME=postgres" >> .env
+          echo "POSTGRES_USER=admin" >> .env
+          echo "POSTGRES_PASSWORD=12345" >> .env
+          echo "POSTGRES_HOST=db" >> .env
 
       - name: Run Tests
         run: python manage.py test
-        env:
-          DJANGO_SETTINGS_MODULE: quizes.settings
