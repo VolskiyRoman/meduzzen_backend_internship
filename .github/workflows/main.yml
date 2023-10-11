@@ -19,8 +19,14 @@ jobs:
         run: |
           docker-compose up -d
       
-      - name: Run database migrations
+      - name: Show containers
         run: |
           docker ps -a
 
+      - name: Run database migrations
+        run: |
+          docker exec -it meduzzen_backend_internship_app_1 
+          python manage.py migrate
+          python manage.py test
+  
 
