@@ -11,7 +11,7 @@ services:
       - 8000:8000
     depends_on:
       - redis
-      - postgres
+      - db
     environment:
       - .env
     networks:
@@ -24,8 +24,8 @@ services:
     networks:
       - mynetwork
 
-  postgres:
-    image: postgres:latest
+  db:
+    image: postgres:13.3
     ports:
       - 5433:5432
     environment:
