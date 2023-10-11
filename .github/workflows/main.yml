@@ -25,6 +25,6 @@ jobs:
 
       - name: Run database migrations
         run: |
-          docker exec meduzzen_backend_internship_db_1 ls -a
+          docker exec meduzzen_backend_internship_db_1 ls /var/run/postgresql -a
   
 
