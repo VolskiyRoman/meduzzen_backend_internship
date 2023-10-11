@@ -29,20 +29,15 @@ jobs:
       - name: Build and start services
         run: |
           docker-compose up -d
-      
-      - name: Show containers
-        run: |
-          docker ps -a
-
-      - name: RM
-        run: |
-         docker exec meduzzen_backend_internship_db_1 ls -a
-         docker exec meduzzen_backend_internship_db_1 ls /var -a
-         docker exec meduzzen_backend_internship_db_1 ls /var/run -a
-         docker exec meduzzen_backend_internship_db_1 ls /var/run/postgresql -a
 
       - name: Run database migrations
         run: |
           docker exec meduzzen_backend_internship_app_1 python manage.py migrate
+
+      - name: Run tests
+        run: |
+          docker exec meduzzen_backend_internship_app_1 python manage.py test
+      
+          
   
 
