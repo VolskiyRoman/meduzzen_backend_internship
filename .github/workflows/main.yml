@@ -1,40 +1,38 @@
 name: Python application
 
-on: [push]
+on: push
+
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
-    env:
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_DB: ${{ secrets.POSTGRES_NAME }}
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.7, 3.8]
 
     services:
-      postgres:
-        image: postgres:latest
+      db:
+        image: postgres
         env:
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
       with:
-        python-version: 3.9
-    - name: Install dependencies
+        python-version: ${{ matrix.python-version }}
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest-django
-    - name: Run migrations
-      run: python manage.py migrate
-    - name: Run tests
-      run: py.test
+    - name: Run Tests
+      run: |
+        python manage.py test
