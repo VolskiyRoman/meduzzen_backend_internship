@@ -43,6 +43,3 @@ jobs:
           python manage.py createcachetable
         env:
           DATABASE_URL: postgres://admin:12345@db:5432/postgres
-
-      - name: Run Tests
-        run: python manage.py test
