@@ -21,8 +21,6 @@ jobs:
           echo "EMAIL_HOST_USER=quizzesproj@gmail.com" >> .env
           echo "EMAIL_HOST_PASSWORD=ksrhezkjpjrrrmoa" >> .env
 
-      - name: Login DockerHub
-
       - name: Set up Docker Compose
         run: |
           docker-compose --version
