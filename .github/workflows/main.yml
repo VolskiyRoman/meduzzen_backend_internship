@@ -20,12 +20,20 @@ jobs:
           echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
           echo "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" >> .env
           echo "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
-      
 
       - name: Set up Docker Compose
         run: |
           docker-compose --version
         continue-on-error: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache  # Define the directory where dependencies are cached
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
 
       - name: Build and start services
         run: |
@@ -42,7 +50,6 @@ jobs:
       - name: Run tests
         run: |
           docker exec meduzzen_backend_internship_app_1 python manage.py test
-      
-          
+
   
 
