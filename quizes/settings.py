@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'health_check',
     'users',
     'services',
+    'company',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'social_django'
@@ -172,6 +173,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication'
     ),
 }
 
