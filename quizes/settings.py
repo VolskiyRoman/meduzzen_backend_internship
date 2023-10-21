@@ -36,9 +36,11 @@ INSTALLED_APPS = [
     'users',
     'services',
     'company',
+    'actions',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'social_django'
+    'social_django',
+    'drf_spectacular'
 ]
 
 MIDDLEWARE = [
@@ -164,6 +166,8 @@ LOGGING = {
 }
 
 REST_FRAMEWORK = {
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'users.utils.custom_exception_handler',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 3,
