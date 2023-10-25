@@ -1,8 +1,9 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from actions.models import Actions, InvitationStatus
+from actions.models import UserStatus, UserAction
 from company.serializers import CompanySerializer
 
 from .models import Company
@@ -27,7 +28,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         except Company.DoesNotExist:
             return Response({'error': 'Company does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-        action = Actions(user=request.user, company=company, status=InvitationStatus.owner.value)
+        action = UserAction(user=request.user, company=company, status=UserStatus.OWNER.value)
         action.save()
 
         headers = self.get_success_headers(serializer.data)
@@ -37,3 +38,4 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return Company.objects.filter(is_hidden=False)
         return Company.objects.all()
+

@@ -1,6 +1,6 @@
 from django.db import models
 
-from actions.models import Actions, InvitationStatus
+from actions.models import UserAction, UserStatus
 from services.utils.models import TimeStampedModel
 
 
@@ -13,7 +13,7 @@ class Company(TimeStampedModel):
         verbose_name_plural = "Companies"
 
     def owner(self):
-        action = Actions.objects.filter(company=self, status=InvitationStatus.owner.value).first()
+        action = UserAction.objects.filter(company=self, status=UserStatus.OWNER.value).first()
         return action.user
 
     def __str__(self):

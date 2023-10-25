@@ -47,6 +47,7 @@ ruff==0.0.292
 social-auth-app-django==5.3.0
 social-auth-core==4.4.2
 sqlparse==0.4.4
+StrEnum==0.4.15
 typing_extensions==4.8.0
 tzdata==2023.3
 uritemplate==4.1.1
