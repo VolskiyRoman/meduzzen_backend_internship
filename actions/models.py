@@ -1,24 +1,18 @@
-from django.db import models
-
-from services.utils.models import TimeStampedModel
-from users.models import User
 from enum import auto
+
+from django.db import models
 from strenum import StrEnum
 
-
-class UserStatus(StrEnum):
-    MEMBER = auto()
-    OWNER = auto()
-
-    @classmethod
-    def choices(cls):
-        return [(key.value, key.name) for key in cls]
+from company.models import Company
+from services.utils.models import TimeStampedModel
+from users.models import User
 
 
 class InviteStatus(StrEnum):
-    INVITED = auto()
+    PENDING = auto()
     REVOKED = auto()
     DECLINED = auto()
+    APPROVED = auto()
 
     @classmethod
     def choices(cls):
@@ -26,7 +20,7 @@ class InviteStatus(StrEnum):
 
 
 class RequestStatus(StrEnum):
-    REQUESTED = auto()
+    PENDING = auto()
     CANCELED = auto()
     REJECTED = auto()
     APPROVED = auto()
@@ -36,18 +30,15 @@ class RequestStatus(StrEnum):
         return [(key.value, key.name) for key in cls]
 
 
-class Action(TimeStampedModel):
-    company = models.ForeignKey('company.Company', on_delete=models.CASCADE, related_name="actions", db_column="company_id")
+class InvitationAction(TimeStampedModel):
+    status = models.CharField(choices=InviteStatus.choices())
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="invitation_actions",
+                                db_column="company_id")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
-class UserAction(Action):
-    status = models.CharField(choices=UserStatus.choices())
-
-
-class InvitationAction(Action):
-    status = models.CharField(choices=UserStatus.choices())
-
-
-class RequestAction(Action):
-    status = models.CharField(choices=UserStatus.choices())
+class RequestAction(TimeStampedModel):
+    status = models.CharField(choices=RequestStatus.choices())
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="request_actions",
+                                db_column="company_id")
+    user = models.ForeignKey(User, on_delete=models.CASCADE)

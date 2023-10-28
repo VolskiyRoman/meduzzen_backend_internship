@@ -1,111 +1,153 @@
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient
 
-from company.models import Company
-from users.models import User
-
-from .models import InviteStatus, UserStatus, UserAction
+from .models import InvitationAction
+from .test_fixtures import FixturesForAPITests
 
 
-class ActionsAPITestCase(APITestCase):
-    def setUp(self):
-        self.user_1_payload = {
-            'email': 'user1@example.com',
-            'password': 'testpassword'
-        }
+class InviteAPITestCase(FixturesForAPITests):
+    def test_create_invite_good(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.user_2_payload = {
-            'email': 'user2@example.com',
-            'password': 'testpassword'
-        }
-        self.user1 = User.objects.create_user(**self.user_1_payload)
-        self.user2 = User.objects.create_user(**self.user_2_payload)
+    def test_create_invite_unauthorized(self):
+        client = APIClient()
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        self.comp = Company.objects.create(name='testcomp1', description='testdesc', is_hidden=False)
-        self.action = UserAction.objects.create(status=UserStatus.OWNER.value, company=self.comp, user=self.user1)
+    def test_create_invite_already_in_company(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user1.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_invite(self):
-        self.user1_token = self.client.post('/auth/jwt/create/', self.user_1_payload).data['access']
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.user1_token)
-        url = '/actions/invite'
-        request_data = {"company": self.comp.id,
-                   "user": self.user2.id}
-        response = self.client.post(url, request_data)
+    def test_create_invite_get_good(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user2_invites = InvitationAction.objects.filter(user=self.user2).count()
+        self.assertEqual(user2_invites, 1)
+
+    def test_revoke_invitation(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        invite_id = response.data.get('id')
+
+        url = f'/api/invite/{invite_id}/revoke/'
+        response = client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Invitation sent successfully')
 
-    #def test_check_my_invites(self):
+    def test_decline_invitation(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        invite_id = response.data.get('id')
+
+        client = self.user_login(self.user_2_payload)
+        url = f'/api/invite/{invite_id}/decline/'
+        response = client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_accept_invitation(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        invite_id = response.data.get('id')
+
+        client = self.user_login(self.user_2_payload)
+        url = f'/api/invite/{invite_id}/accept/'
+        response = client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-    # def test_cancel_invite(self):
-    #     Actions.objects.create(status=InviteStatus.INVITED.value, company=self.comp, user=self.user2)
-    #
-    #     self.user2_token = self.client.post('/auth/jwt/create/', self.user_2_payload).data['access']
-    #     self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.user2_token)
-    #
-    #     url = '/actions/my/invites'
-    #     response = self.client.get(url)
-    #     invite_id = response.data[0]['id']
-    #
-    #     url = '/actions/cancel'
-    #     request_data = {"is_owner": False,
-    #                     "id": invite_id}
-    #
-    #     response = self.client.post(url, request_data)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #
-    #     self.assertEqual(response.data['message'], 'This invitation is declined')
-    #
-    # def test_accept_invite(self):
-    #     Actions.objects.create(status=InviteStatus.INVITED.value, company=self.comp, user=self.user2)
-    #
-    #     self.user2_token = self.client.post('/auth/jwt/create/', self.user_2_payload).data['access']
-    #     self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.user2_token)
-    #
-    #     url = '/actions/my/invites'
-    #     response = self.client.get(url)
-    #     invite_id = response.data[0]['id']
-    #
-    #     url = '/actions/accept'
-    #     request_data = {"is_owner": False,
-    #                     "id": invite_id}
-    #     response = self.client.post(url, request_data)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.data['message'], 'This invitation is accepted')
-    #
-    # def test_request(self):
-    #     self.user2_token = self.client.post('/auth/jwt/create/', self.user_2_payload).data['access']
-    #     self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.user2_token)
-    #
-    #     url = '/actions/request'
-    #     request_data = {"company": self.comp.id}
-    #     response = self.client.post(url, request_data)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.data['message'], 'Request sent successfully')
-    #
-    # def test_remove(self):
-    #     member = Actions.objects.create(status=UserStatus.MEMBER.value, company=self.comp, user=self.user2)
-    #
-    #     self.user1_token = self.client.post('/auth/jwt/create/', self.user_1_payload).data['access']
-    #     self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.user1_token)
-    #
-    #     url = '/actions/remove'
-    #     request_data = {"id": member.id}
-    #     response = self.client.post(url, request_data)
-    #
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.data['message'], 'This user is removed')
-    #
-    # def test_leave(self):
-    #     member = Actions.objects.create(status=UserStatus.MEMBER.value, company=self.comp, user=self.user2)
-    #
-    #     self.user2_token = self.client.post('/auth/jwt/create/', self.user_2_payload).data['access']
-    #     self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.user2_token)
-    #
-    #     url = '/actions/leave'
-    #     request_data = {"id": member.id}
-    #     response = self.client.post(url, request_data)
-    #
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.data['message'], 'You left the company')
+class RequestAPITestCase(FixturesForAPITests):
+    def test_create_request_good(self):
+        client = self.user_login(self.user_2_payload)
+        url = '/api/request/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_create_request_unauthorized(self):
+        client = APIClient()
+        url = '/api/request/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_request_already_in_company(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/request/'
+        request_data = {"company": self.comp.id, "user": self.user1.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_request_get_good(self):
+        client = self.user_login(self.user_1_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user2_invites = InvitationAction.objects.filter(user=self.user2).count()
+
+        self.user_login(self.user_2_payload)
+        self.assertEqual(user2_invites, 1)
+
+    def test_cancel_request(self):
+        client = self.user_login(self.user_2_payload)
+        url = '/api/request/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        request_id = response.data.get('id')
+
+        url = f'/api/request/{request_id}/cancel/'
+        response = client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_reject_request(self):
+        client = self.user_login(self.user_2_payload)
+        url = '/api/request/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        request_id = response.data.get('id')
+
+        client = self.user_login(self.user_1_payload)
+        url = f'/api/request/{request_id}/reject/'
+        response = client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_approve_request(self):
+        client = self.user_login(self.user_2_payload)
+        url = '/api/request/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        request_id = response.data.get('id')
+
+        client = self.user_login(self.user_1_payload)
+        url = f'/api/request/{request_id}/approve/'
+        response = client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

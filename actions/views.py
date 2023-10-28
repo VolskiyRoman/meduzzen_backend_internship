@@ -1,287 +1,192 @@
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from company.models import Company
-from users.models import User
-
-from .models import UserStatus, InviteStatus, RequestStatus, UserAction, InvitationAction, RequestAction
-from .serializers import (
-    # AcceptCancelSerializer,
-    InvitatationSerializer,
-    # LeaveFromCompany,
-    # MemberListSerializer,
-    # MyInvitesSerializer,
-    # MyRequestsSerializer,
-    # RequestSerializer,
-)
+from .models import InvitationAction, InviteStatus, RequestAction, RequestStatus
+from .permissions import InvitationPermission, InviteInteractionPermission, RequestInteractionPermission, RequestPermission
+from .serializers import InvitationSerializer, RequestSerializer
 
 
-class CreateInvitation(APIView):
+class InvitationViewSet(mixins.ListModelMixin,
+                        mixins.RetrieveModelMixin,
+                        mixins.CreateModelMixin,
+                        viewsets.GenericViewSet):
+    serializer_class = InvitationSerializer
     queryset = InvitationAction.objects.all()
-    serializer_class = InvitatationSerializer
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        data = request.data
-        sender = request.user
-        company_id = data.get('company')
-        recipient_id = data.get('user')
+    def get_permissions(self):
+        if self.action in [
+            'list',
+            'retrieve'
+        ]:
+            return [IsAuthenticated()]
+        elif self.action in [
+            'accept_invitation',
+            'cancel_invitation',
+            'revoke_invitation'
+        ]:
+            return [IsAuthenticated(), InviteInteractionPermission()]
+        return [IsAuthenticated(), InvitationPermission()]
 
-        recipient = User.objects.get(pk=recipient_id)
-        company = Company.objects.get(pk=company_id)
+    def perform_create(self, serializer):
+        company = serializer.validated_data['company']
+        invited_user = serializer.validated_data['user']
 
-        recipient_member = UserAction.objects.filter(company=company, user=recipient).first()
+        if company.members.filter(id=invited_user.id).exists():
+            raise ValidationError({'user': ['User already in company']})
 
-        if not company:
-            return Response({'error': 'Company not found'}, status=404)
+        if InvitationAction.objects.filter(user=invited_user, status=InviteStatus.PENDING.value):
+            raise ValidationError({'user': ['User already invited in company']})
 
-        if not recipient:
-            return Response({'error': 'Recipient not found'}, status=404)
+        pending_request = RequestAction.objects.filter(user=invited_user, status=RequestStatus.PENDING.value,
+                                                       company=company).first()
 
-        if recipient_member:
-            return Response({'error': 'User already in company'}, status=400)
-
-        if company.owner() == sender:
-            recipient_invite = InvitationAction.objects.filter(company=company, user=recipient).first()
-            recipient_request = RequestAction.objects.filter(company=company, user=recipient).first()
-
-            if not recipient_invite:
-                if recipient_request:
-                    recipient_request.status = RequestStatus.APPROVED.value
-                    recipient_request.save()
-
-                    recipient_member = UserAction(company=company, user=recipient, status=UserStatus.MEMBER.value)
-                    recipient_member.save()
-
-                    return Response({'message': 'This member added to company'}, status=200)
-                else:
-                    created_invite = InvitationAction(company=company, user=recipient, status=InviteStatus.INVITED.value)
-                    created_invite.save()
-                    return Response({'message': 'Invitation sent successfully'}, status=200)
-            else:
-                return Response({'error': 'User already invited'}, status=400)
-        else:
-            return Response({'error': 'You are not the owner of this company'}, status=400)
+        if pending_request:
+            pending_request.status = RequestStatus.APPROVED.value
+            pending_request.save()
+            company.members.add(pending_request.user)
+            return Response({'message': 'This member added to company'}, status=200)
 
 
-# class InvitationViewSet(viewsets.ModelViewSet):
-#
-# my invites
-#     user = request.user
-#     user_owner_actions = UserAction.objects.filter(status=UserStatus.OWNER.value, user=user)
-#     companies = [action.company for action in user_owner_actions]
-#     actions = InvitationAction.objects.filter(status=InviteStatus.INVITED.value, company__in=companies)
-#     serializer = ActionsSerializer(actions, many=True)
-#     return Response(serializer.data)
+        status = InviteStatus.PENDING.value
+        serializer.save(status=status, company=company)
 
-# class CreateRequest(APIView):
-#     queryset = Actions.objects.all()
-#     serializer_class = RequestSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def post(self, request, *args, **kwargs):
-#         data = request.data
-#         user = request.user
-#         company_id = data.get('company')
-#
-#         company = Company.objects.get(pk=company_id)
-#
-#         if not company:
-#             return Response({'error': 'Company not found'}, status=404)
-#
-#         action = Actions.objects.filter(company=company, user=user).first()
-#         if action:
-#             if action.status == RequestStatus.REQUESTED.value:
-#                 return Response({'error': 'User already requested'}, status=400)
-#             elif action.status in [UserStatus.MEMBER.value, UserStatus.OWNER.value]:
-#                 return Response({'error': 'User already in company'}, status=400)
-#             elif action.status in [InviteStatus.INVITED.value]:
-#                 action.status = UserStatus.MEMBER.value
-#                 action.save()
-#                 return Response({'message': 'You added to company'}, status=200)
-#         else:
-#             action = Actions(company=company, user=user, status=RequestStatus.REQUESTED.value)
-#             action.save()
-#         return Response({'message': 'Request sent successfully'}, status=200)
-#
-#     def get(self, request):
-#         user = request.user
-#         user_owner_actions = Actions.objects.filter(status=UserStatus.OWNER.value, user=user)
-#         companies = [action.company for action in user_owner_actions]
-#         actions = Actions.objects.filter(status=RequestStatus.REQUESTED.value, company__in=companies)
-#         serializer = ActionsSerializer(actions, many=True)
-#         return Response(serializer.data)
-#
-#
+    @action(detail=True, url_path='accept', methods=['POST']
+        , permission_classes=[IsAuthenticated, InviteInteractionPermission])
+    def accept_invitation(self, request, pk=None):
+        invite = self.get_object()
+        user = request.user
+        recipient = invite.user
+
+        if user != recipient:
+            raise ValidationError({'user': ['You cannot interact with this invitation']})
+
+        invite.status = InviteStatus.APPROVED.value
+        invite.save()
+
+        company = invite.company
+        company.members.add(user)
+
+        return Response({'message': 'You added to company'}, status=200)
+
+    @action(detail=True, url_path='decline', methods=['POST']
+        , permission_classes=[IsAuthenticated, InviteInteractionPermission])
+    def cancel_invitation(self, request, pk=None):
+        invite = self.get_object()
+        user = request.user
+        recipient = invite.user
+
+        if user != recipient:
+            raise ValidationError({'user': ['You cannot interact with this invitation']})
+
+        invite.status = InviteStatus.DECLINED.value
+        invite.save()
+
+        return Response({'message': 'You declined company invitation'}, status=200)
+
+    @action(detail=True, url_path='revoke', methods=['POST'],
+            permission_classes=[IsAuthenticated, InviteInteractionPermission])
+    def revoke_invitation(self, request, pk=None):
+        invite = self.get_object()
+        user = request.user
+        owner = invite.company.owner
+
+        if user != owner:
+            raise ValidationError({'user': ['You cannot interact with this invitation']})
+
+        invite.status = InviteStatus.REVOKED.value
+        invite.save()
+
+        return Response({'message': 'Invitation revoked successfully'}, status=200)
 
 
-# class CancelInvitation(APIView):
-#     queryset = InvitationAction.objects.all()
-#     serializer_class = AcceptCancelSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def post(self, request, *args, **kwargs):
-#         data = request.data
-#         sender = request.user
-#         action_id = data.get('id')
-#         is_owner = data.get('is_owner', None)
-#         action = Actions.objects.filter(pk=action_id).first()
-#         if not action:
-#             return Response({'error': 'No such action exist'}, status=400)
-#
-#         if is_owner is None:
-#             return Response({'error': 'You must specify who is making this cancellation'}, status=400)
-#
-#         if action.status == InviteStatus.REVOKED.value:
-#             return Response({'error': 'This invitation already revoked'}, status=400)
-#
-#         if action.status == InviteStatus.DECLINED.value:
-#             return Response({'error': 'This invitation already declined'}, status=400)
-#
-#         if action.status == UserStatus.MEMBER.value:
-#             return Response({'error': 'This invitation already accepted'}, status=400)
-#
-#         if is_owner:
-#             if sender == action.company.owner():
-#                 action.status = InviteStatus.REVOKED.value
-#                 action.save()
-#                 return Response({'message': 'Invitation revoked'}, status=200)
-#             return Response({'error': 'You are not owner of this company'}, status=400)
-#         else:
-#             if sender == action.user:
-#                 action.status = InviteStatus.DECLINED.value
-#                 action.save()
-#                 return Response({'message': 'This invitation is declined'}, status=200)
-#             return Response({'error': 'You cannot interact with this invitation '}, status=400)
-#
-#
-# class AcceptInvitation(APIView):
-#     queryset = InvitationAction.objects.all()
-#     serializer_class = AcceptCancelSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def post(self, request):
-#         data = request.data
-#         sender = request.user
-#         action_id = data.get('id')
-#         is_owner = data.get('is_owner', None)
-#         action = Actions.objects.filter(pk=action_id).first()
-#         if not action:
-#             return Response({'error': 'No such action exist'}, status=400)
-#
-#         if is_owner is None:
-#             return Response({'error': 'You must specify who is making this cancellation'}, status=400)
-#
-#         if action.status == InviteStatus.REVOKED.value:
-#             return Response({'error': 'This invitation already revoked'}, status=400)
-#         elif action.status == UserStatus.MEMBER.value:
-#             return Response({'error': 'This invitation already accepted'}, status=400)
-#         elif action.status == InviteStatus.DECLINED.value:
-#             return Response({'error': 'This invitation already declined'}, status=400)
-#
-#         if is_owner:
-#             if sender == action.company.owner():
-#                 if action.status == UserStatus.OWNER.value:
-#                     return Response({'error': 'You are owner of this company'}, status=400)
-#                 action.status = UserStatus.MEMBER.value
-#                 action.save()
-#                 return Response({'message': 'Invitation accepted'}, status=200)
-#             return Response({'error': 'You are not owner of this company'}, status=400)
-#         else:
-#             if sender == action.user:
-#                 action.status = UserStatus.MEMBER.value
-#                 action.save()
-#                 return Response({'message': 'This invitation is accepted'}, status=200)
-#             return Response({'error': 'You cannot interact with this invitation '}, status=400)
-#
-#
-# class RemoveUser(APIView):
-#     queryset = Actions.objects.all()
-#     serializer_class = LeaveFromCompany
-#     permission_classes = [IsAuthenticated]
-#
-#     def post(self, request, *args, **kwargs):
-#         data = request.data
-#         user = request.user
-#
-#         action_id = data.get('id')
-#         action = Actions.objects.filter(pk=action_id).first()
-#
-#         if not action:
-#             return Response({'error': 'There is no such action'}, status=400)
-#
-#         if user == action.company.owner():
-#             if action.status == DeletedUserStatus.REMOVED.value:
-#                 return Response({'error': 'This invitation already removed'}, status=400)
-#             if action.status == UserStatus.MEMBER.value:
-#                 action.status = DeletedUserStatus.REMOVED.value
-#                 action.save()
-#                 return Response({'message': 'This user is removed'}, status=200)
-#             return Response({'error': 'This member is not a member in your company'}, status=200)
-#         else:
-#             return Response({'error': 'You are not the owner of this company'}, status=400)
-#
-#
-# class LeaveFromCompany(APIView):
-#     queryset = Actions.objects.all()
-#     serializer_class = LeaveFromCompany
-#     permission_classes = [IsAuthenticated]
-#
-#     def post(self, request, *args, **kwargs):
-#         data = request.data
-#         user = request.user
-#
-#         action_id = data.get('id')
-#         action = Actions.objects.filter(pk=action_id).first()
-#
-#         if not action:
-#             return Response({'error': 'There is no such action'}, status=400)
-#
-#         if user == action.user:
-#             if action.status == DeletedUserStatus.LEFT.value:
-#                 return Response({'error': 'You have already left the company'}, status=400)
-#             if action.status == UserStatus.MEMBER.value:
-#                 action.status = DeletedUserStatus.LEFT.value
-#                 action.save()
-#                 return Response({'message': 'You left the company'}, status=200)
-#         return Response({'error': 'You are not a member in the company'}, status=200)
-#
-#
-# class MemberList(APIView):
-#     queryset = Actions.objects.all()
-#     serializer_class = MemberListSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def get(self, request):
-#         user = request.user
-#         user_owner_actions = Actions.objects.filter(status=UserStatus.OWNER.value, user=user)
-#         companies = [action.company for action in user_owner_actions]
-#         actions = Actions.objects.filter(status=UserStatus.MEMBER.value, company__in=companies)
-#         serializer = ActionsSerializer(actions, many=True)
-#         return Response(serializer.data)
-#
-#
-# class MyInvites(APIView):
-#     queryset = Actions.objects.all()
-#     serializer_class = MyInvitesSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def get(self, request):
-#         user = request.user
-#         filtered_actions = Actions.objects.filter(status=InviteStatus.INVITED.value, user=user)
-#         serializer = ActionsSerializer(filtered_actions, many=True)
-#         return Response(serializer.data)
-#
-#
-# class MyRequests(APIView):
-#     queryset = Actions.objects.all()
-#     serializer_class = MyRequestsSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def get(self, request):
-#         user = request.user
-#         filtered_actions = Actions.objects.filter(status=RequestStatus.REQUESTED.value, user=user)
-#         serializer = ActionsSerializer(filtered_actions, many=True)
-#         return Response(serializer.data)
+class RequestViewSet(mixins.ListModelMixin,
+                        mixins.RetrieveModelMixin,
+                        mixins.CreateModelMixin,
+                        viewsets.GenericViewSet):
+    serializer_class = RequestSerializer
+    queryset = RequestAction.objects.all()
+
+    def get_permissions(self):
+        if self.action in [
+            'list',
+            'retrieve'
+        ]:
+            return [IsAuthenticated()]
+        elif self.action in [
+            'approve_request',
+            'reject_request',
+            'cancel_request'
+        ]:
+            return [IsAuthenticated(), RequestInteractionPermission()]
+        return [IsAuthenticated(), RequestPermission()]
+
+    def perform_create(self, serializer):
+        company = serializer.validated_data['company']
+        user = self.request.user
+
+        if company.members.filter(id=user.id).exists():
+            raise ValidationError({'user': ['You are already in company']})
+
+        pending_invite = InvitationAction.objects.filter(user=user, status=RequestStatus.PENDING.value,
+                                                         company=company).first()
+        if pending_invite:
+            pending_invite.status = RequestStatus.APPROVED.value
+            pending_invite.save()
+            company.members.add(pending_invite.user)
+            return Response({'message': 'You are added to this company'}, status=200)
+
+        if InvitationAction.objects.filter(user=user, status=InviteStatus.PENDING.value):
+            raise ValidationError({'user': ['User already invited in company']})
+
+        status = InviteStatus.PENDING.value
+        serializer.save(status=status, company=company, user=self.request.user)
+
+    @action(detail=True, url_path='approve', methods=['POST'],
+            permission_classes=[IsAuthenticated, RequestInteractionPermission])
+    def approve_request(self, request, pk=None):
+        instance = self.get_object()
+        owner = instance.company.owner
+
+        if request.user != owner:
+            raise ValidationError({'user': ['You cannot interact with this invitation']})
+
+        instance.status = RequestStatus.APPROVED.value
+        instance.save()
+
+        company = instance.company
+        company.members.add(instance.user)
+
+        return Response({'message': 'You added this user to company'}, status=200)
+
+    @action(detail=True, url_path='reject', methods=['POST'],
+            permission_classes=[IsAuthenticated, RequestInteractionPermission])
+    def reject_request(self, request, pk=None):
+        instance = self.get_object()
+        owner = instance.company.owner
+
+        if request.user != owner:
+            raise ValidationError({'user': ['You cannot interact with this invitation']})
+
+        instance.status = RequestStatus.REJECTED.value
+        instance.save()
+
+        company = instance.company
+        company.members.add()
+
+        return Response({'message': 'You rejected this request'}, status=200)
+
+    @action(detail=True, url_path='cancel', methods=['POST'],
+            permission_classes=[IsAuthenticated, RequestInteractionPermission])
+    def cancel_request(self, request, pk=None):
+        instance = self.get_object()
+
+        if instance.user != self.request.user:
+            raise ValidationError({'user': ['You cannot interact with this invitation']})
+
+        instance.status = RequestStatus.CANCELED.value
+        instance.save()
+
+        return Response({'message': 'Request canceled successfully'}, status=200)
