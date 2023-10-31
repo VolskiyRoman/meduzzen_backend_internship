@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from .models import InvitationAction
+from .models import InvitationAction, InviteStatus, RequestAction, RequestStatus
 from .test_fixtures import FixturesForAPITests
 
 
@@ -20,6 +20,13 @@ class InviteAPITestCase(FixturesForAPITests):
         response = client.post(url, request_data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_create_invite_not_owner(self):
+        client = self.user_login(self.user_2_payload)
+        url = '/api/invite/'
+        request_data = {"company": self.comp.id, "user": self.user2.id}
+        response = client.post(url, request_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_create_invite_already_in_company(self):
         client = self.user_login(self.user_1_payload)
         url = '/api/invite/'
@@ -27,7 +34,7 @@ class InviteAPITestCase(FixturesForAPITests):
         response = client.post(url, request_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_invite_get_good(self):
+    def test_create_invite_get(self):
         client = self.user_login(self.user_1_payload)
         url = '/api/invite/'
         request_data = {"company": self.comp.id, "user": self.user2.id}
@@ -50,30 +57,18 @@ class InviteAPITestCase(FixturesForAPITests):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_decline_invitation(self):
-        client = self.user_login(self.user_1_payload)
-        url = '/api/invite/'
-        request_data = {"company": self.comp.id, "user": self.user2.id}
-        response = client.post(url, request_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        invite_id = response.data.get('id')
+        invite = InvitationAction.objects.create(company=self.comp, user=self.user2, status=InviteStatus.PENDING.value)
 
         client = self.user_login(self.user_2_payload)
-        url = f'/api/invite/{invite_id}/decline/'
+        url = f'/api/invite/{invite.id}/decline/'
         response = client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_accept_invitation(self):
-        client = self.user_login(self.user_1_payload)
-        url = '/api/invite/'
-        request_data = {"company": self.comp.id, "user": self.user2.id}
-        response = client.post(url, request_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        invite_id = response.data.get('id')
+        invite = InvitationAction.objects.create(company=self.comp, user=self.user2, status=InviteStatus.PENDING.value)
 
         client = self.user_login(self.user_2_payload)
-        url = f'/api/invite/{invite_id}/accept/'
+        url = f'/api/invite/{invite.id}/accept/'
         response = client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -100,7 +95,7 @@ class RequestAPITestCase(FixturesForAPITests):
         response = client.post(url, request_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_request_get_good(self):
+    def test_create_request_get(self):
         client = self.user_login(self.user_1_payload)
         url = '/api/invite/'
         request_data = {"company": self.comp.id, "user": self.user2.id}
@@ -125,29 +120,17 @@ class RequestAPITestCase(FixturesForAPITests):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_reject_request(self):
-        client = self.user_login(self.user_2_payload)
-        url = '/api/request/'
-        request_data = {"company": self.comp.id, "user": self.user2.id}
-        response = client.post(url, request_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        request_id = response.data.get('id')
+        request = RequestAction.objects.create(company=self.comp, user=self.user2, status=RequestStatus.PENDING.value)
 
         client = self.user_login(self.user_1_payload)
-        url = f'/api/request/{request_id}/reject/'
+        url = f'/api/request/{request.id}/reject/'
         response = client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_approve_request(self):
-        client = self.user_login(self.user_2_payload)
-        url = '/api/request/'
-        request_data = {"company": self.comp.id, "user": self.user2.id}
-        response = client.post(url, request_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        request_id = response.data.get('id')
+        request = RequestAction.objects.create(company=self.comp, user=self.user2, status=RequestStatus.PENDING.value)
 
         client = self.user_login(self.user_1_payload)
-        url = f'/api/request/{request_id}/approve/'
+        url = f'/api/request/{request.id}/approve/'
         response = client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

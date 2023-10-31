@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import InvitationAction, InviteStatus, RequestAction, RequestStatus
-from .permissions import InvitationPermission, InviteInteractionPermission, RequestInteractionPermission, RequestPermission
+from .permissions import InvitationPermission, InviteInteractionPermission, RequestInteractionPermission
 from .serializers import InvitationSerializer, RequestSerializer
 
 
@@ -34,6 +34,12 @@ class InvitationViewSet(mixins.ListModelMixin,
         company = serializer.validated_data['company']
         invited_user = serializer.validated_data['user']
 
+        if not company:
+            raise ValidationError({'company': ['Company not found']})
+
+        if not invited_user:
+            raise ValidationError({'user': ['User not found']})
+
         if company.members.filter(id=invited_user.id).exists():
             raise ValidationError({'user': ['User already in company']})
 
@@ -49,12 +55,10 @@ class InvitationViewSet(mixins.ListModelMixin,
             company.members.add(pending_request.user)
             return Response({'message': 'This member added to company'}, status=200)
 
-
         status = InviteStatus.PENDING.value
         serializer.save(status=status, company=company)
 
-    @action(detail=True, url_path='accept', methods=['POST']
-        , permission_classes=[IsAuthenticated, InviteInteractionPermission])
+    @action(detail=True, url_path='accept', methods=['POST'])
     def accept_invitation(self, request, pk=None):
         invite = self.get_object()
         user = request.user
@@ -71,8 +75,7 @@ class InvitationViewSet(mixins.ListModelMixin,
 
         return Response({'message': 'You added to company'}, status=200)
 
-    @action(detail=True, url_path='decline', methods=['POST']
-        , permission_classes=[IsAuthenticated, InviteInteractionPermission])
+    @action(detail=True, url_path='decline', methods=['POST'])
     def cancel_invitation(self, request, pk=None):
         invite = self.get_object()
         user = request.user
@@ -86,8 +89,7 @@ class InvitationViewSet(mixins.ListModelMixin,
 
         return Response({'message': 'You declined company invitation'}, status=200)
 
-    @action(detail=True, url_path='revoke', methods=['POST'],
-            permission_classes=[IsAuthenticated, InviteInteractionPermission])
+    @action(detail=True, url_path='revoke', methods=['POST'])
     def revoke_invitation(self, request, pk=None):
         invite = self.get_object()
         user = request.user
@@ -121,11 +123,14 @@ class RequestViewSet(mixins.ListModelMixin,
             'cancel_request'
         ]:
             return [IsAuthenticated(), RequestInteractionPermission()]
-        return [IsAuthenticated(), RequestPermission()]
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         company = serializer.validated_data['company']
         user = self.request.user
+
+        if not company:
+            raise ValidationError({'company': ['Company not found']})
 
         if company.members.filter(id=user.id).exists():
             raise ValidationError({'user': ['You are already in company']})
@@ -138,14 +143,13 @@ class RequestViewSet(mixins.ListModelMixin,
             company.members.add(pending_invite.user)
             return Response({'message': 'You are added to this company'}, status=200)
 
-        if InvitationAction.objects.filter(user=user, status=InviteStatus.PENDING.value):
-            raise ValidationError({'user': ['User already invited in company']})
+        if RequestAction.objects.filter(user=user, status=InviteStatus.PENDING.value):
+            raise ValidationError({'user': ['You are already requested to this company']})
 
         status = InviteStatus.PENDING.value
         serializer.save(status=status, company=company, user=self.request.user)
 
-    @action(detail=True, url_path='approve', methods=['POST'],
-            permission_classes=[IsAuthenticated, RequestInteractionPermission])
+    @action(detail=True, url_path='approve', methods=['POST'])
     def approve_request(self, request, pk=None):
         instance = self.get_object()
         owner = instance.company.owner
@@ -161,8 +165,7 @@ class RequestViewSet(mixins.ListModelMixin,
 
         return Response({'message': 'You added this user to company'}, status=200)
 
-    @action(detail=True, url_path='reject', methods=['POST'],
-            permission_classes=[IsAuthenticated, RequestInteractionPermission])
+    @action(detail=True, url_path='reject', methods=['POST'])
     def reject_request(self, request, pk=None):
         instance = self.get_object()
         owner = instance.company.owner
@@ -178,8 +181,7 @@ class RequestViewSet(mixins.ListModelMixin,
 
         return Response({'message': 'You rejected this request'}, status=200)
 
-    @action(detail=True, url_path='cancel', methods=['POST'],
-            permission_classes=[IsAuthenticated, RequestInteractionPermission])
+    @action(detail=True, url_path='cancel', methods=['POST'])
     def cancel_request(self, request, pk=None):
         instance = self.get_object()
 
