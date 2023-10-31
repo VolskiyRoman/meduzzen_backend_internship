@@ -5,7 +5,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import InvitationAction, InviteStatus, RequestAction, RequestStatus
-from .permissions import InvitationPermission, InviteInteractionPermission, RequestInteractionPermission
+from .permissions import (
+    InvitationPermission,
+    IsCompanyOwner,
+    IsInviteOwner,
+    IsInviteRecipient,
+    IsInviteStatusPending,
+    IsRequestOwner,
+    IsRequestStatusPending,
+)
 from .serializers import InvitationSerializer, RequestSerializer
 
 
@@ -25,9 +33,12 @@ class InvitationViewSet(mixins.ListModelMixin,
         elif self.action in [
             'accept_invitation',
             'cancel_invitation',
+        ]:
+            return [IsAuthenticated(), IsInviteStatusPending(), IsInviteRecipient()]
+        elif self.action in [
             'revoke_invitation'
         ]:
-            return [IsAuthenticated(), InviteInteractionPermission()]
+            return [IsAuthenticated(), IsInviteStatusPending(), IsInviteOwner()]
         return [IsAuthenticated(), InvitationPermission()]
 
     def perform_create(self, serializer):
@@ -62,10 +73,6 @@ class InvitationViewSet(mixins.ListModelMixin,
     def accept_invitation(self, request, pk=None):
         invite = self.get_object()
         user = request.user
-        recipient = invite.user
-
-        if user != recipient:
-            raise ValidationError({'user': ['You cannot interact with this invitation']})
 
         invite.status = InviteStatus.APPROVED.value
         invite.save()
@@ -78,11 +85,6 @@ class InvitationViewSet(mixins.ListModelMixin,
     @action(detail=True, url_path='decline', methods=['POST'])
     def cancel_invitation(self, request, pk=None):
         invite = self.get_object()
-        user = request.user
-        recipient = invite.user
-
-        if user != recipient:
-            raise ValidationError({'user': ['You cannot interact with this invitation']})
 
         invite.status = InviteStatus.DECLINED.value
         invite.save()
@@ -92,12 +94,6 @@ class InvitationViewSet(mixins.ListModelMixin,
     @action(detail=True, url_path='revoke', methods=['POST'])
     def revoke_invitation(self, request, pk=None):
         invite = self.get_object()
-        user = request.user
-        owner = invite.company.owner
-
-        if user != owner:
-            raise ValidationError({'user': ['You cannot interact with this invitation']})
-
         invite.status = InviteStatus.REVOKED.value
         invite.save()
 
@@ -120,9 +116,12 @@ class RequestViewSet(mixins.ListModelMixin,
         elif self.action in [
             'approve_request',
             'reject_request',
+        ]:
+            return [IsAuthenticated(), IsRequestStatusPending(), IsCompanyOwner()]
+        elif self.action in [
             'cancel_request'
         ]:
-            return [IsAuthenticated(), RequestInteractionPermission()]
+            return [IsAuthenticated(), IsRequestStatusPending(), IsRequestOwner()]
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):

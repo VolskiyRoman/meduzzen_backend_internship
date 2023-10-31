@@ -16,21 +16,36 @@ class InvitationPermission(permissions.BasePermission):
         return True
 
 
-class InviteInteractionPermission(permissions.BasePermission):
-    def has_permission(self, request, view):
-        invitation = view.get_object()
+class IsInviteOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.user == obj.company.owner
 
-        if invitation.status != InviteStatus.PENDING.value:
+
+class IsInviteRecipient(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.user == obj.user
+
+
+class IsInviteStatusPending(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.status == InviteStatus.PENDING.value
+
+
+class IsRequestStatusPending(permissions.BasePermission):
+    def has_permission(self, request, view):
+        request = view.get_object()
+
+        if request.status != RequestStatus.PENDING.value:
             return False
 
         return True
 
 
-class RequestInteractionPermission(permissions.BasePermission):
-    def has_permission(self, request, view):
-        request = view.get_object()
+class IsCompanyOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.user == obj.company.owner
 
-        if request.status != RequestStatus.PENDING.value:
-            raise False
 
-        return True
+class IsRequestOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.user == obj.user

@@ -1,7 +1,6 @@
-from enum import auto
+from enum import StrEnum, auto
 
 from django.db import models
-from strenum import StrEnum
 
 from company.models import Company
 from services.utils.models import TimeStampedModel
