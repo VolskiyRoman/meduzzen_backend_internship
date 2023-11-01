@@ -134,3 +134,47 @@ class RequestAPITestCase(FixturesForAPITests):
         url = f'/api/request/{request.id}/approve/'
         response = client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class CompanyAdminAPITestCase(FixturesForAPITests):
+    def test_add_admin(self):
+        self.comp.members.add(self.user2)
+
+        client = self.user_login(self.user_1_payload)
+        url = f'/api/companies/{self.comp.id}/add-admin/'
+        request_data = {"user_id": self.user2.id}
+        response = client.post(url, request_data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_remove_admin(self):
+        self.comp.members.add(self.user2)
+        self.comp.admins.add(self.user2)
+
+        client = self.user_login(self.user_1_payload)
+        url = f'/api/companies/{self.comp.id}/remove-admin/'
+        request_data = {"user_id": self.user2.id}
+        response = client.post(url, request_data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_add_admin_if_owner(self):
+        self.comp.members.add(self.user1)
+
+        client = self.user_login(self.user_1_payload)
+        url = f'/api/companies/{self.comp.id}/add-admin/'
+        request_data = {"user_id": self.user1.id}
+        response = client.post(url, request_data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_remove_admin_bad(self):
+        self.comp.members.add(self.user2)
+
+        client = self.user_login(self.user_1_payload)
+        url = f'/api/companies/{self.comp.id}/remove-admin/'
+        request_data = {"user_id": self.user2.id}
+        response = client.post(url, request_data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+

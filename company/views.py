@@ -33,7 +33,35 @@ class CompanyViewSet(viewsets.ModelViewSet):
         user_id = request.data.get('user_id')
 
         if user_id is None:
-            raise ValidationError({'detail': 'Must be entered user_id in request'})
+            raise ValidationError({'detail': 'Must provide user_id in the request'})
+
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            raise ValidationError({'detail': 'User id must be an integer'})
+
+        try:
+            user = get_user_model().objects.get(pk=user_id)
+        except get_user_model().DoesNotExist:
+            raise ValidationError({'detail': 'User not found'})
+
+        if user_id == company.owner.id:
+            raise ValidationError({'detail': 'The owner of the company cannot be removed'})
+
+        if user in company.members.all():
+            company.members.remove(user)
+            if user in company.admins.all():
+                company.admins.remove(user)
+            return Response({'message': 'User has been deleted from the company'})
+        raise ValidationError({'detail': 'The user is not a member of the company'})
+
+    @action(detail=True, methods=['POST'], url_path='add-admin')
+    def add_admin(self, request, pk=None):
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+
+        if user_id is None:
+            raise ValidationError({'detail': 'Must provide user_id in the request'})
 
         try:
             user_id = int(user_id)
@@ -46,11 +74,34 @@ class CompanyViewSet(viewsets.ModelViewSet):
             raise ValidationError({'detail': 'User not found'})
 
         if user == company.owner:
-            raise ValidationError({'detail': 'The owner of the company cannot be removed'})
+            raise ValidationError({'detail': 'The owner cannot be assigned as an admin.'})
 
-        if user in company.members.all():
-            company.members.remove(user)
+        if user in company.admins.all():
+            return Response({'message': 'User is already an admin.'})
 
-            return Response({'message': 'User has been deleted from company'})
+        company.admins.add(user)
+        return Response({'message': 'User has been added as an admin'})
 
-        raise ValidationError({'detail': 'The user is not a member of the company'})
+    @action(detail=True, methods=['POST'], url_path='remove-admin')
+    def remove_admin(self, request, pk=None):
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+
+        if user_id is None:
+            raise ValidationError({'detail': 'Must provide user_id in the request'})
+
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            raise ValidationError({'detail': 'User id must be an integer'})
+
+        try:
+            user = get_user_model().objects.get(pk=user_id)
+        except get_user_model().DoesNotExist:
+            raise ValidationError({'detail': 'User not found'})
+
+        if user in company.admins.all():
+            company.admins.remove(user)
+            return Response({'message': 'User has been removed as an admin'})
+        else:
+            raise ValidationError({'detail': 'The user is not an admin of the company'})

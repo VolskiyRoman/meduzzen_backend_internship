@@ -7,4 +7,8 @@ class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = '__all__'
-        read_only_fields = ('owner', 'members')
+        read_only_fields = ('owner', 'members', 'admins')
+
+
+class UserActionSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField
