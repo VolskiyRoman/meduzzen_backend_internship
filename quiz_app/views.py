@@ -14,16 +14,17 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.all()
 
     def get_permissions(self):
-        if self.action in [
-            'list',
-            'retrieve'
-        ]:
+        if self.action in ['list', 'retrieve']:
             return [IsAuthenticated()]
         else:
             return [IsAuthenticated(), IsCompanyAdminOrOwner()]
 
     def get_queryset(self):
-        return Quiz.objects.filter(company__members=self.request.user)
+        return (
+            Quiz.objects
+            .filter(company__members=self.request.user)
+            .prefetch_related('company')
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

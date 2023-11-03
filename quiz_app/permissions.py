@@ -9,7 +9,11 @@ class IsCompanyAdminOrOwner(permissions.BasePermission):
             company_id = request.data.get('company')
             if company_id:
                 try:
-                    company = Company.objects.get(id=company_id)
+                    company = (
+                        Company.objects
+                        .prefetch_related('owner', 'admins')
+                        .get(id=company_id)
+                    )
                 except Company.DoesNotExist:
                     company = None
 
