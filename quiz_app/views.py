@@ -1,12 +1,13 @@
-from django.db.models import Sum
+from django.db.models import Prefetch
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from quiz_app.models import Quiz, Result
+from quiz_app.models import Question, Quiz, Result
 from quiz_app.permissions import IsCompanyAdminOrOwner
 from quiz_app.serializers import QuestionSerializer, QuizCreateSerializer
+from services.utils.average_value import calculate_average_score
 
 
 class QuizManagementViewSet(viewsets.ModelViewSet):
@@ -78,25 +79,42 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
         quiz = self.get_object()
         user_input = request.data.get('user_input')
 
-        total_questions = quiz.questions.count()
+        quiz_with_answers = Quiz.objects.prefetch_related(
+            Prefetch('questions', queryset=Question.objects.prefetch_related('answers'))
+        ).get(id=quiz.id)
+
+        questions = quiz_with_answers.questions.count()
         correct_answers = 0
 
-        for i in user_input:
-            question_id = i.get('question')
-            answers = i.get('answers')
-            question = quiz.questions.filter(id=question_id).first()
+        for request_data in user_input:
+            question_id = request_data.get('question')
+            answers = request_data.get('answers')
+
+            question = next((q for q in quiz_with_answers.questions.all() if q.id == question_id), None)
 
             if question:
-                correct_answer_ids = question.answers.filter(is_correct=True).values_list('id', flat=True)
+                correct_answer_ids = [answer.id for answer in question.answers.all() if answer.is_correct]
                 if set(answers) == set(correct_answer_ids):
                     correct_answers += 1
+
+        last_result = Result.objects.filter(quiz=quiz.id, user=request.user).order_by("created_at").first()
+        if last_result:
+            total_questions = questions + last_result.total_questions
+            total_correct_answers = correct_answers + last_result.correct_answers
+        else:
+            total_questions = questions
+            total_correct_answers = correct_answers
+            print(total_correct_answers)
+            print(total_questions)
 
         Result.objects.create(
             quiz=quiz,
             user=request.user,
-            questions=total_questions,
-            correct_answers=correct_answers
-        )
+            questions=questions,
+            correct_answers=correct_answers,
+            current_average_value = total_correct_answers / total_questions,
+            total_questions=total_questions,
+            total_correct_answers=total_correct_answers)
 
         return Response("Quiz completed successfully", status=status.HTTP_200_OK)
 
@@ -104,14 +122,7 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
     def average_score(self, request):
         user = request.user
         user_results = Result.objects.filter(user=user)
+        average_score = calculate_average_score(user_results)
+        return Response({"average_score": average_score}, status=status.HTTP_200_OK)
 
-        total_questions = user_results.aggregate(total_questions=Sum('questions')).get('total_questions') or 0
-        total_correct_answers = user_results.aggregate(total_correct=Sum('correct_answers')).get('total_correct') or 0
-
-        if total_questions > 0:
-            average_score = (total_correct_answers / total_questions) * 100
-        else:
-            average_score = 0
-
-        return Response({"average_score": round(average_score, 2)}, status=status.HTTP_200_OK)
 

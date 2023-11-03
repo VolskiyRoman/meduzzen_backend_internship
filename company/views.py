@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Sum
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -8,6 +7,7 @@ from rest_framework.response import Response
 
 from company.serializers import CompanySerializer
 from quiz_app.models import Result
+from services.utils.average_value import calculate_average_score
 
 from .models import Company
 from .permissions import IsOwnerOrReadOnly
@@ -113,13 +113,5 @@ class CompanyViewSet(viewsets.ModelViewSet):
         company = self.get_object()
         user = request.user
         user_results = Result.objects.filter(user=user, quiz__company=company)
-
-        total_questions = user_results.aggregate(total_questions=Sum('questions')).get('total_questions') or 0
-        total_correct_answers = user_results.aggregate(total_correct=Sum('correct_answers')).get('total_correct') or 0
-
-        if total_questions > 0:
-            average_score = (total_correct_answers / total_questions) * 100
-        else:
-            average_score = 0
-
-        return Response({"average_score": round(average_score, 2)}, status=status.HTTP_200_OK)
+        average_score = calculate_average_score(user_results)
+        return Response({"average_score": average_score}, status=status.HTTP_200_OK)

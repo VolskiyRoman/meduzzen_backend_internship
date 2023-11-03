@@ -27,5 +27,7 @@ class Result(TimeStampedModel):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='quizzes')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     questions = models.PositiveIntegerField()
-    correct_answers = models.PositiveIntegerField()
-
+    correct_answers = models.PositiveIntegerField(default=0)
+    current_average_value = models.FloatField(default=0.0)
+    total_questions = models.PositiveIntegerField(default=0)
+    total_correct_answers = models.PositiveIntegerField(default=0)
