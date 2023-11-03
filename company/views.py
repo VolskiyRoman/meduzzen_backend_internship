@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
-from rest_framework import viewsets
+from django.db.models import Sum
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from company.serializers import CompanySerializer
+from quiz_app.models import Result
 
 from .models import Company
 from .permissions import IsOwnerOrReadOnly
@@ -105,3 +107,19 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return Response({'message': 'User has been removed as an admin'})
         else:
             raise ValidationError({'detail': 'The user is not an admin of the company'})
+
+    @action(detail=True, methods=['GET'], url_path='user-average-score', permission_classes=[IsAuthenticated])
+    def user_average_score(self, request, pk=None):
+        company = self.get_object()
+        user = request.user
+        user_results = Result.objects.filter(user=user, quiz__company=company)
+
+        total_questions = user_results.aggregate(total_questions=Sum('questions')).get('total_questions') or 0
+        total_correct_answers = user_results.aggregate(total_correct=Sum('correct_answers')).get('total_correct') or 0
+
+        if total_questions > 0:
+            average_score = (total_correct_answers / total_questions) * 100
+        else:
+            average_score = 0
+
+        return Response({"average_score": round(average_score, 2)}, status=status.HTTP_200_OK)
