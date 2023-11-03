@@ -8,11 +8,13 @@ from rest_framework.routers import DefaultRouter
 
 from actions.views import InvitationViewSet, RequestViewSet
 from company.views import CompanyViewSet
+from quiz_app.views import QuizManagementViewSet
 
 router = DefaultRouter()
 router.register(r'companies', CompanyViewSet)
 router.register(r'invite', InvitationViewSet)
 router.register(r'request', RequestViewSet)
+router.register(r'quizzes', QuizManagementViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
