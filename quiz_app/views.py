@@ -1,11 +1,11 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
+
 from quiz_app.models import Quiz
 from quiz_app.permissions import IsCompanyAdminOrOwner
-from quiz_app.serializers import QuizCreateSerializer, QuestionSerializer
+from quiz_app.serializers import QuestionSerializer, QuizCreateSerializer
 
 
 class QuizManagementViewSet(viewsets.ModelViewSet):
@@ -39,24 +39,6 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(detail=True, url_path='delete-question', methods=['POST'])
-    def delete_question(self, request, pk=None):
-        quiz = self.get_object()
-        question_id = request.data.get('question_id')
-
-        question = quiz.questions.filter(id=question_id).first()
-
-        if question:
-            remaining_questions_count = quiz.questions.count()
-            if remaining_questions_count <= 2:
-                return Response("At least 2 questions are required. Could not delete the question.",
-                                status=status.HTTP_400_BAD_REQUEST)
-            else:
-                question.delete()
-                return Response("Question deleted successfully", status=status.HTTP_200_OK)
-        else:
-            return Response("Question not found", status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, url_path='delete-question', methods=['POST'])
     def delete_question(self, request, pk=None):
