@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Prefetch
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -97,7 +98,12 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
                 if set(answers) == set(correct_answer_ids):
                     correct_answers += 1
 
-        last_result = Result.objects.filter(quiz=quiz.id, user=request.user).order_by("created_at").first()
+                key = f"quiz:{quiz.id}:user:{request.user.id}:question:{question_id}"
+                value = f"correct_answers:{correct_answers}, user_answers:{answers}"
+                cache.set(key, value, timeout=172800)
+
+        last_result = Result.objects.filter(quiz=quiz, user=request.user).order_by("created_at").last()
+
         if last_result:
             total_questions = questions + last_result.total_questions
             total_correct_answers = correct_answers + last_result.correct_answers
@@ -112,7 +118,8 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
             correct_answers=correct_answers,
             current_average_value=total_correct_answers / total_questions,
             total_questions=total_questions,
-            total_correct_answers=total_correct_answers)
+            total_correct_answers=total_correct_answers
+        )
 
         return Response("Quiz completed successfully", status=status.HTTP_200_OK)
 
