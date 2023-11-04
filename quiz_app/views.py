@@ -104,15 +104,13 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
         else:
             total_questions = questions
             total_correct_answers = correct_answers
-            print(total_correct_answers)
-            print(total_questions)
 
         Result.objects.create(
             quiz=quiz,
             user=request.user,
             questions=questions,
             correct_answers=correct_answers,
-            current_average_value = total_correct_answers / total_questions,
+            current_average_value=total_correct_answers / total_questions,
             total_questions=total_questions,
             total_correct_answers=total_correct_answers)
 
