@@ -1,7 +1,5 @@
-import csv
 
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -11,6 +9,7 @@ from rest_framework.response import Response
 from company.serializers import CompanySerializer
 from quiz_app.models import Result
 from services.utils.average_value import calculate_average_score
+from services.utils.export_data import generate_csv_response
 
 from .models import Company
 from .permissions import IsOwnerOrAdmin, IsOwnerOrReadOnly
@@ -140,28 +139,9 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, url_path='admin-export-global', methods=['GET'])
     def admin_export_global(self, request, pk=None):
-        company = self.get_object()
-        results = Result.objects.filter(quiz__company=company)
-
-        serialized_data = [
-            {
-                'id': result.id,
-                'user': str(result.user),
-                'company': result.quiz.company.name,
-                'quiz': str(result.quiz.title),
-                'score': result.current_average_value,
-                'date passed': result.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            for result in results
-        ]
-
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{company.name}_quiz_results.csv"'
-
-        writer = csv.DictWriter(response, fieldnames=['id', 'user', 'company', 'quiz', 'score', 'date passed'])
-        writer.writeheader()
-        writer.writerows(serialized_data)
-
+        results = Result.objects.filter(quiz__company=self.get_object())
+        response = generate_csv_response(results, f"{self.get_object().name}_quiz_results.csv",
+                                         ['id', 'user', 'company', 'quiz', 'score', 'date_passed'])
         return response
 
     @action(detail=True, url_path='admin-export-user', methods=['POST'],
@@ -169,7 +149,6 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def admin_export_user(self, request, pk=None):
         company = self.get_object()
         user_id = request.data.get('user_id')
-
         if not user_id:
             return Response({'detail': 'User ID is required in the request'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -179,24 +158,6 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
         results = Result.objects.filter(user=user, quiz__company=company)
-
-        serialized_data = [
-            {
-                'id': result.id,
-                'user': str(result.user),
-                'company': result.quiz.company.name,
-                'quiz': str(result.quiz.title),
-                'score': result.current_average_value,
-                'date passed': result.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            for result in results
-        ]
-
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{user.username}_quiz_results.csv"'
-
-        writer = csv.DictWriter(response, fieldnames=['id', 'user', 'company', 'quiz', 'score', 'date passed'])
-        writer.writeheader()
-        writer.writerows(serialized_data)
-
+        response = generate_csv_response(results, f"{user.username}_quiz_results.csv",
+                                         ['id', 'user', 'company', 'quiz', 'score', 'date_passed'])
         return response

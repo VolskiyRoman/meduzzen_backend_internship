@@ -1,8 +1,6 @@
-import csv
 
 from django.core.cache import cache
 from django.db.models import Prefetch
-from django.http import HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -12,6 +10,7 @@ from quiz_app.models import Question, Quiz, Result
 from quiz_app.permissions import IsCompanyAdminOrOwner
 from quiz_app.serializers import QuestionSerializer, QuizCreateSerializer
 from services.utils.average_value import calculate_average_score
+from services.utils.export_data import generate_csv_response
 
 
 class QuizManagementViewSet(viewsets.ModelViewSet):
@@ -136,24 +135,7 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
     @action(detail=False, url_path='user-export', methods=['GET'])
     def export_for_member(self, request):
         results = Result.objects.filter(user=request.user)
-        serialized_data = [
-            {
-                'id': result.id,
-                'user': str(result.user),
-                'company': result.quiz.company.name,
-                'quiz': str(result.quiz.title),
-                'score': result.current_average_value,
-                'date passed': result.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            for result in results
-        ]
-
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="quiz_results.csv"'
-
-        writer = csv.DictWriter(response, fieldnames=['id', 'user', 'company', 'quiz', 'score', 'date passed'])
-        writer.writeheader()
-        writer.writerows(serialized_data)
-
+        response = generate_csv_response(results, "quiz_results.csv",
+                                         ['id', 'user', 'company', 'quiz', 'score', 'date_passed'])
         return response
 
