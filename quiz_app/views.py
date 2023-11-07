@@ -1,3 +1,4 @@
+
 from django.core.cache import cache
 from django.db.models import Prefetch
 from rest_framework import status, viewsets
@@ -9,6 +10,7 @@ from quiz_app.models import Question, Quiz, Result
 from quiz_app.permissions import IsCompanyAdminOrOwner
 from quiz_app.serializers import QuestionSerializer, QuizCreateSerializer
 from services.utils.average_value import calculate_average_score
+from services.utils.export_data import generate_csv_response
 
 
 class QuizManagementViewSet(viewsets.ModelViewSet):
@@ -130,4 +132,10 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
         average_score = calculate_average_score(user_results)
         return Response({"average_score": average_score}, status=status.HTTP_200_OK)
 
+    @action(detail=False, url_path='user-export', methods=['GET'])
+    def export_for_member(self, request):
+        results = Result.objects.filter(user=request.user)
+        response = generate_csv_response(results, "quiz_results.csv",
+                                         ['id', 'user', 'company', 'quiz', 'score', 'date_passed'])
+        return response
 
