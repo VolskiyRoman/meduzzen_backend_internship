@@ -6,8 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from company.serializers import CompanySerializer
-from quiz_app.models import Result
+from company.serializers import CompanySerializer, QuizListSerializer, QuizResultsSerializer
+from quiz_app.models import Quiz, Result
 from services.utils.average_value import calculate_average_score
 from services.utils.export_data import generate_csv_response
 
@@ -35,7 +35,9 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsOwnerOrReadOnly()]
         elif self.action in [
             'admin_export_global',
-            'admin_export_user'
+            'admin_export_user',
+            'quiz_last_time_completed',
+            'quiz_results'
         ]:
             return [IsAuthenticated(), IsOwnerOrAdmin()]
 
@@ -161,3 +163,24 @@ class CompanyViewSet(viewsets.ModelViewSet):
         response = generate_csv_response(results, f"{user.username}_quiz_results.csv",
                                          ['id', 'user', 'company', 'quiz', 'score', 'date_passed'])
         return response
+
+    @action(detail=True, url_path='quiz-last-time-completed', methods=['GET'])
+    def quiz_last_time_completed(self, request, pk=None):
+        company = self.get_object()
+        quizzes = Quiz.objects.filter(company=company)
+
+        serializer = QuizListSerializer(quizzes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, url_path='quiz-results', methods=['GET'])
+    def quiz_results(self, request, pk=None):
+        company = self.get_object()
+
+        quizzes = Quiz.objects.filter(company=company)
+
+        serialized_results = QuizResultsSerializer(quizzes, many=True).data
+
+        return Response(serialized_results, status=status.HTTP_200_OK)
+
+
+

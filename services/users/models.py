@@ -38,6 +38,8 @@ class CustomAbstractUser(AbstractUser, TimeStampedModel):
     first_name = models.CharField(max_length=30, blank=True, null=True)
     last_name = models.CharField(max_length=30, blank=True, null=True)
 
+    avatar = models.ImageField(upload_to='avatars', blank=True, null=True)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
