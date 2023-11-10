@@ -24,7 +24,7 @@ class Answer(models.Model):
 
 
 class Result(TimeStampedModel):
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='quizzes')
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='results')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     questions = models.PositiveIntegerField()
     correct_answers = models.PositiveIntegerField(default=0)

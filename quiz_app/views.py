@@ -1,11 +1,14 @@
-
+from django.contrib.auth.backends import UserModel
 from django.core.cache import cache
-from django.db.models import Prefetch
+from django.db.models import Max, Prefetch, Sum
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from company.models import Company
+from company.serializers import ResultSerializer
 from quiz_app.models import Question, Quiz, Result
 from quiz_app.permissions import IsCompanyAdminOrOwner
 from quiz_app.serializers import QuestionSerializer, QuizCreateSerializer
@@ -19,7 +22,7 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.all()
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'complete_quiz', 'average_score']:
+        if self.action in ['list', 'retrieve', 'complete_quiz', 'average_score', 'global_rating', 'user-quiz-results']:
             return [IsAuthenticated()]
         else:
             return [IsAuthenticated(), IsCompanyAdminOrOwner()]
@@ -139,3 +142,69 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
                                          ['id', 'user', 'company', 'quiz', 'score', 'date_passed'])
         return response
 
+    @action(detail=False, url_path='global-rating', methods=['GET'])
+    def global_rating(self, request):
+        all_results = Result.objects.all().select_related('quiz')
+
+        total_questions = all_results.aggregate(Sum('questions'))['questions__sum'] or 0
+        total_correct = all_results.aggregate(Sum('correct_answers'))['correct_answers__sum'] or 0
+
+        global_rating = 0.0
+        if total_questions > 0:
+            global_rating = total_correct / total_questions
+
+        return Response({'global_rating': global_rating})
+
+    @action(detail=True, url_path='user-quiz-results', methods=['GET'])
+    def user_quiz_results(self, request, pk=None):
+        user = get_object_or_404(UserModel, pk=pk)
+
+        results = Result.objects.filter(user=user)
+
+        serialized_results = ResultSerializer(results, many=True).data
+
+        response_data = {
+            'id': user.id,
+            'results': serialized_results
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(detail=False, url_path='all-users-quiz-results', methods=['GET'])
+    def all_users_quiz_results(self, request):
+        all_users = UserModel.objects.all()
+
+        results = Result.objects.select_related('user').filter(user__in=all_users)
+
+        user_results_mapping = {}
+        for result in results:
+            if result.user.id not in user_results_mapping:
+                user_results_mapping[result.user.id] = {
+                    'id': result.user.id,
+                    'results': []
+                }
+            serialized_result = ResultSerializer(result).data
+            user_results_mapping[result.user.id]['results'].append(serialized_result)
+
+        all_user_results = list(user_results_mapping.values())
+
+        return Response(all_user_results, status=status.HTTP_200_OK)
+
+    @action(detail=True, url_path='company-users-last-results', methods=['GET'])
+    def company_users_last_results(self, request, pk=None):
+        company = get_object_or_404(Company, pk=pk)
+
+        last_results = Result.objects.filter(quiz__company=company).values('user').annotate(
+            last_result_date=Max('created_at'))
+
+        user_last_results = []
+        for result in last_results:
+            user_id = result['user']
+            last_result_date = result['last_result_date']
+
+            user_last_results.append({
+                'id': user_id,
+                'last_result_date': last_result_date
+            })
+
+        return Response(user_last_results, status=status.HTTP_200_OK)
