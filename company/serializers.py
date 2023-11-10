@@ -23,8 +23,6 @@ class QuizListSerializer(serializers.ModelSerializer):
         last_result = Result.objects.filter(quiz=obj).order_by('-created_at').first()
         if last_result:
             return last_result.created_at
-        else:
-            return None
 
     class Meta:
         model = Quiz

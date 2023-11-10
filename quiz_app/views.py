@@ -1,6 +1,6 @@
 from django.contrib.auth.backends import UserModel
 from django.core.cache import cache
-from django.db.models import Max, Prefetch
+from django.db.models import Max, Prefetch, Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -144,13 +144,10 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, url_path='global-rating', methods=['GET'])
     def global_rating(self, request):
-        all_results = Result.objects.all()
-        total_questions = 0
-        total_correct = 0
+        all_results = Result.objects.all().select_related('<your_related_field>')
 
-        for result in all_results:
-            total_questions += result.questions
-            total_correct += result.correct_answers
+        total_questions = all_results.aggregate(Sum('questions'))['questions__sum'] or 0
+        total_correct = all_results.aggregate(Sum('correct_answers'))['correct_answers__sum'] or 0
 
         global_rating = 0.0
         if total_questions > 0:
