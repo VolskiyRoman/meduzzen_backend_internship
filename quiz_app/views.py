@@ -144,7 +144,7 @@ class QuizManagementViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, url_path='global-rating', methods=['GET'])
     def global_rating(self, request):
-        all_results = Result.objects.all().select_related('<your_related_field>')
+        all_results = Result.objects.all().select_related('quiz')
 
         total_questions = all_results.aggregate(Sum('questions'))['questions__sum'] or 0
         total_correct = all_results.aggregate(Sum('correct_answers'))['correct_answers__sum'] or 0
